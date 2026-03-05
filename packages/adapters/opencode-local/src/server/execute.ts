@@ -252,6 +252,18 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     env.PAPERCLIP_API_KEY = authToken;
   }
   const billingType = resolveOpenCodeBillingType(env);
+  // Write PAPERCLIP_ env vars to a file so the agent's Bash tool can source them.
+  const envFileLines: string[] = [];
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith("PAPERCLIP_")) {
+      envFileLines.push(`export ${key}=${JSON.stringify(value)}`);
+    }
+  }
+  if (envFileLines.length > 0) {
+    const envFilePath = path.join(cwd, ".paperclip-env");
+    await fs.writeFile(envFilePath, envFileLines.join("\n") + "\n", { mode: 0o600 });
+  }
+
   const runtimeEnv = ensurePathInEnv({ ...process.env, ...env });
   await ensureCommandResolvable(command, cwd, runtimeEnv);
 
